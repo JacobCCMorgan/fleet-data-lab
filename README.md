@@ -10,7 +10,7 @@ The data behind every project comes from one US ELD provider's device-management
 |---|---|---|---|
 | F0 | [telematics-data-foundation](https://github.com/JacobCCMorgan/telematics-data-foundation) | How do you turn PII-laden operational exports into a shareable, join-safe, tested data model — and what does the fleet look like once you can query it? | **Released** — 12 tables, DuckDB views, 43 quality checks, 16 tests, snapshot findings |
 | P1 | [eld-ecm-disconnect](https://github.com/JacobCCMorgan/eld-ecm-disconnect) | Which ELD units have lost their engine (ECM) connection persistently rather than transiently, does it come back three days later, does predicting it take a model, and who should the field team visit first? | **Released** — device table, repeated-CV scorer comparison, decision curves, tiered priority list, dashboard, 21 tests |
-| P2 | eld-device-log-parser | What do 85,000 lines of device firmware log say about upload latency, offline buffering, state transitions and error codes — and how do you make that queryable? | Planned |
+| P2 | [eld-device-log-parser](https://github.com/JacobCCMorgan/eld-device-log-parser) | What do 85,000 lines of device firmware log say about upload latency, offline buffering, state transitions and error codes — and how do you make that queryable? | **Released** — 80-pattern registry (100 % of lines), nine event tables, Drain3 comparison, 81 tests |
 | P3 | eld-subscription-lifecycle | Where in a one-year-contract business does churn happen, which organisations are at risk before their renewal date, and how much of next quarter's device demand is migration versus new business? | Planned |
 | P5 | fmcsa-eld-logbook-toolkit | Can an FMCSA ELD output file be parsed, checksum-verified, reconciled against the eRODS event list and run through the hours-of-service rules — on a real driver's month? | Planned |
 | P4 | eld-telemetry-replay | When 2,000+ trucks stream 30-second reports, how do you segment trips and stops, detect ECM silence while moving, and stay correct when buffered data arrives late? | Planned (awaiting raw telemetry file) |
@@ -31,6 +31,13 @@ Each statement links to a reproducible script in the foundation repository.
 - A model is not needed to rank them: the plain count of silent reports over three days predicts a severe day 4 as well as a random forest and better than the chronic / intermittent labels, which ignore how much the truck drives.
 - The 27 devices above 1,000 silent reports in three days (15 % of the list) produced 82 % of the next observed day's silent driving; 14 of them are "intermittent" under the share-based rule and would be missed by a chronic-only campaign.
 - Only 4.4 % of flagged devices have a support ticket (base rate 5.2 %); most August cases had resolved by September while 62 of 88 severe devices on 28 Sep were new. The ranking has to run daily.
+
+## Findings from P2 (firmware logs, two devices)
+
+- 73 % of a device log is serial-bus and LED chatter; everything support looks for (state changes, errors, OTA, offline buffering) is under 1 % of lines.
+- Uploads go out every 30 s while driving and every 5 min while sleeping; 300 of 304 were acknowledged within a second, and the three that hit a broker connection reset were stored, re-sent and acknowledged 10–32 s later.
+- The firmware's ECM-disconnect event (ERR005) fired 22 times in an hour on an OBD-II test vehicle whose only missing field was engine hours — a false positive a fleet-level rule on RPM would not raise.
+- The truck rebooted five times around an over-the-air update; "VIN not yet detected" turned out to be parked trucks with the engine off, not broken installs.
 
 ## How to read the projects
 
