@@ -11,7 +11,7 @@ The data behind every project comes from one US ELD provider's device-management
 | F0 | [telematics-data-foundation](https://github.com/JacobCCMorgan/telematics-data-foundation) | How do you turn PII-laden operational exports into a shareable, join-safe, tested data model — and what does the fleet look like once you can query it? | **Released** — 12 tables, DuckDB views, 43 quality checks, 16 tests, snapshot findings |
 | P1 | [eld-ecm-disconnect](https://github.com/JacobCCMorgan/eld-ecm-disconnect) | Which ELD units have lost their engine (ECM) connection persistently rather than transiently, does it come back three days later, does predicting it take a model, and who should the field team visit first? | **Released** — device table, repeated-CV scorer comparison, decision curves, tiered priority list, dashboard, 21 tests |
 | P2 | [eld-device-log-parser](https://github.com/JacobCCMorgan/eld-device-log-parser) | What do 85,000 lines of device firmware log say about upload latency, offline buffering, state transitions and error codes — and how do you make that queryable? | **Released** — 80-pattern registry (100 % of lines), nine event tables, Drain3 comparison, 81 tests |
-| P3 | eld-subscription-lifecycle | Where in a one-year-contract business does churn happen, which organisations are at risk before their renewal date, and how much of next quarter's device demand is migration versus new business? | Planned |
+| P3 | [eld-subscription-lifecycle](https://github.com/JacobCCMorgan/eld-subscription-lifecycle) | Where in a one-year-contract business does churn happen, which organisations are at risk before their renewal date, and how much of next year's renewal load is migration versus new business? | **Released** — reconstructed renewal histories validated on a second export, Kaplan-Meier / Cox / discrete-time hazard, time-ordered model holdouts, 60-day risk list, renewal calendar, call-campaign outcomes, 11 tests |
 | P5 | fmcsa-eld-logbook-toolkit | Can an FMCSA ELD output file be parsed, checksum-verified, reconciled against the eRODS event list and run through the hours-of-service rules — on a real driver's month? | Planned |
 | P4 | eld-telemetry-replay | When 2,000+ trucks stream 30-second reports, how do you segment trips and stops, detect ECM silence while moving, and stay correct when buffered data arrives late? | Planned (awaiting raw telemetry file) |
 
@@ -21,7 +21,7 @@ The data behind every project comes from one US ELD provider's device-management
 - Only 1 of the 14 chronically disconnected customer units ever appeared in the field-issue tracker — the support queue does not see this failure mode. (A further 15 "chronic" units are the provider's internal bench devices, which have no engine attached and are excluded from every customer figure.)
 - The newest "Volvo 2026" batch is moving-while-silent on 98 % of flagged reports versus 33–61 % for regular batches: a protocol / wiring issue on new model-year trucks, not random hardware failure.
 - 12.6 % of reporting units last reported in low-battery mode and 500 have not updated in 30+ days — a ready installer work-list.
-- 74 % of contract terms are exactly 365 days, tenure clusters at 365 / 730 / 1,095 days and 90 % of returned units came back within the first year: churn is a first-renewal event. 82 % of 2026 activations replaced an earlier device.
+- 74 % of contract terms are exactly 365 days and tenure clusters at the anniversaries. (An earlier version of this line read churn as a first-year event from `activation_date`; P3 showed that field is the start of the current term, rolled forward at each renewal, and the foundation findings were corrected.)
 
 Each statement links to a reproducible script in the foundation repository.
 
@@ -38,6 +38,13 @@ Each statement links to a reproducible script in the foundation repository.
 - Uploads go out every 30 s while driving and every 5 min while sleeping; 300 of 304 were acknowledged within a second, and the three that hit a broker connection reset were stored, re-sent and acknowledged 10–32 s later.
 - The firmware's ECM-disconnect event (ERR005) fired 22 times in an hour on an OBD-II test vehicle whose only missing field was engine hours — a false positive a fleet-level rule on RPM would not raise.
 - The truck rebooted five times around an over-the-air update; "VIN not yet detected" turned out to be parked trucks with the engine off, not broken installs.
+
+## Findings from P3 (subscription lifecycle, 2019-2026)
+
+- The CRM overwrites term dates at each renewal and purges rows of customers who leave; a second export from January 2024 proves both and lets the renewal histories be reconstructed and validated (95 % of the 2024 customers reconstructed as covered on that date).
+- The first anniversary is not a cliff: 23 % of customers do not renew at the first, 28-30 % at the second to fourth. What moved is the calendar: non-renewal rose from 17 % of anniversaries in 2023 to 30 % in 2025, at every tenure.
+- Fleet size at renewal time is the strongest attribute (one vehicle 25 % non-renewal, six or more 8 %); 43 % of churned customers returned the device mid-term, a third of first-year churn is done before the 60-day decision point, and a device return during the term multiplies the odds of non-renewal by 2.3.
+- The CRM alone gives the renewal desk a modest ranking (AUC 0.59 on time-ordered holdouts; the top fifth of accounts holds 30 % of the churners), and the yearly level moves more than any attribute. 3,663 subscriptions come up in the next twelve months with 640-840 expected non-renewals; the 2.0 hardware migration is 90 % done and customers who agreed to swap on a 2025 call are 88 % migrated and 4 % gone.
 
 ## How to read the projects
 
