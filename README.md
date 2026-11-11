@@ -12,7 +12,7 @@ The data behind every project comes from one US ELD provider's device-management
 | P1 | [eld-ecm-disconnect](https://github.com/JacobCCMorgan/eld-ecm-disconnect) | Which ELD units have lost their engine (ECM) connection persistently rather than transiently, does it come back three days later, does predicting it take a model, and who should the field team visit first? | **Released** — device table, repeated-CV scorer comparison, decision curves, tiered priority list, dashboard, 21 tests |
 | P2 | [eld-device-log-parser](https://github.com/JacobCCMorgan/eld-device-log-parser) | What do 85,000 lines of device firmware log say about upload latency, offline buffering, state transitions and error codes — and how do you make that queryable? | **Released** — 80-pattern registry (100 % of lines), nine event tables, Drain3 comparison, 81 tests |
 | P3 | [eld-subscription-lifecycle](https://github.com/JacobCCMorgan/eld-subscription-lifecycle) | Where in a one-year-contract business does churn happen, which organisations are at risk before their renewal date, and how much of next year's renewal load is migration versus new business? | **Released** — reconstructed renewal histories validated on a second export, Kaplan-Meier / Cox / discrete-time hazard, time-ordered model holdouts, 60-day risk list, renewal calendar, call-campaign outcomes, 11 tests |
-| P5 | fmcsa-eld-logbook-toolkit | Can an FMCSA ELD output file be parsed, checksum-verified, reconciled against the eRODS event list and run through the hours-of-service rules — on a real driver's month? | Planned |
+| P5 | [fmcsa-eld-logbook-toolkit](https://github.com/JacobCCMorgan/fmcsa-eld-logbook-toolkit) | Can an FMCSA ELD output file be parsed, checksum-verified, reconciled against the eRODS event list and run through the hours-of-service rules — on a real driver's month? | **Released** — Appendix A data checks verified on a production file, record-level reconciliation with the portal export, duty timeline, 395.3 and 395.5 rule engines, unidentified-driving analysis, 36 tests |
 | P4 | eld-telemetry-replay | When 2,000+ trucks stream 30-second reports, how do you segment trips and stops, detect ECM silence while moving, and stay correct when buffered data arrives late? | Planned (awaiting raw telemetry file) |
 
 ## Findings so far (from F0, snapshot 2026-09-28)
@@ -46,11 +46,18 @@ Each statement links to a reproducible script in the foundation repository.
 - Fleet size at renewal time is the strongest attribute (one vehicle 25 % non-renewal, six or more 8 %); 43 % of churned customers returned the device mid-term, a third of first-year churn is done before the 60-day decision point, and a device return during the term multiplies the odds of non-renewal by 2.3.
 - The CRM alone gives the renewal desk a modest ranking (AUC 0.59 on time-ordered holdouts; the top fifth of accounts holds 30 % of the churners), and the yearly level moves more than any attribute. 3,663 subscriptions come up in the next twelve months with 640-840 expected non-renewals; the 2.0 hardware migration is 90 % done and customers who agreed to swap on a 2025 call are 88 % migrated and 4 % gone.
 
+## Findings from P5 (ELD output file, one driver, September 2026)
+
+- The device's data-check values match the regulation's algorithms exactly: 800 of 800 line checks, the file check and 424 of 424 driver event checks verify, and the 83 unidentified-driver checks are consistent with one username. The output file and the portal's eRODS event list agree record for record (790 sequence ids, 0 differences).
+- The driver ran 16 days of 9.6–10.0 driving hours. Under the property-carrying rules the month holds one violation (a 25-minute lunch where 30 were required); under the passenger-carrying rules none, but the longest day is 0.8 minutes under the 10-hour limit. Which rule set applies is a question about the operation, not the file, and it changes the answer.
+- The same vehicle was driven on 9 of the driver's days off with nobody logged in — 52 hours, 1,424 miles in the unidentified driver profile — and three more unidentified driving records are the driver's own driving during involuntary logouts. The unidentified-driving diagnostic was raised on Sep 10 and never cleared.
+- Thirty of the device maker's certification-test files (kept private) show what the checks catch: a VIN edited after the fact fails 24 line checks, duplicate sequence ids expose a hand-edited submission, and event checks computed before a vehicle got its unit number verify only with the empty element — a provenance change the validator reports separately from corruption.
+
 ## How to read the projects
 
 - **Real / public / synthetic** is stated for every dataset. Nothing synthetic is presented as fleet performance.
 - **Validation** is designed per question (time-based splits, independent time windows, round-trip checks, hand-computed fixtures), and every README has a "what this cannot tell you" section.
-- Code is Python (pandas, DuckDB, scikit-learn, lifelines) and SQL; tests run in GitHub Actions.
+- Code is Python (pandas, DuckDB, scikit-learn, lifelines, matplotlib) and SQL; tests run in GitHub Actions.
 
 ## About
 
