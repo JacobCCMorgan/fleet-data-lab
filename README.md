@@ -14,6 +14,7 @@ The data behind every project comes from one US ELD provider's device-management
 | P3 | [eld-subscription-lifecycle](https://github.com/JacobCCMorgan/eld-subscription-lifecycle) | Where in a one-year-contract business does churn happen, which organisations are at risk before their renewal date, and how much of next year's renewal load is migration versus new business? | **Released** — reconstructed renewal histories validated on a second export, Kaplan-Meier / Cox / discrete-time hazard, time-ordered model holdouts, 60-day risk list, renewal calendar, call-campaign outcomes, 11 tests |
 | P5 | [fmcsa-eld-logbook-toolkit](https://github.com/JacobCCMorgan/fmcsa-eld-logbook-toolkit) | Can an FMCSA ELD output file be parsed, checksum-verified, reconciled against the eRODS event list and run through the hours-of-service rules — on a real driver's month? | **Released** — Appendix A data checks verified on a production file, record-level reconciliation with the portal export, duty timeline, 395.3 and 395.5 rule engines, unidentified-driving analysis, 36 tests |
 | P4 | [eld-telemetry-replay](https://github.com/JacobCCMorgan/eld-telemetry-replay) | When 2,000+ trucks stream 30-second reports, how do you segment trips and stops, detect ECM silence while moving, and stay correct when buffered data arrives late? | **Released** — event-time replayer with pluggable sinks, per-device stateful consumer (derived state, ECM rules, odometer and speed consistency checks), trip / stop segmenter, late-data arrival model with watermark and arrival-order strategies measured against the oracle, independent check of the P1 tiers, 31 tests |
+| P6 | [telematics-marts](https://github.com/JacobCCMorgan/telematics-marts) | The projects each re-derived the same intermediate tables from the foundation exports. Can one tested modeling layer define them once, reproduce every published number, and keep the history the CRM overwrites? | **Released** — dbt on DuckDB: 9 staging views, 6 intermediate models, 7 dimensions and facts, 5 reporting marts, a type-2 snapshot of subscription slots, exposures and lineage, 72 dbt tests, 42 parity and integrity checks in pytest |
 
 ## Findings so far (from F0, snapshot 2026-09-28)
 
@@ -60,11 +61,18 @@ Each statement links to a reproducible script in the foundation repository.
 - One device reported 125 km/h and 4,016 RPM unchanged every 30 seconds for two hours while its GPS fix showed it parked: a frozen ECM frame that counts as driving in mileage and hours-of-service totals, caught by comparing the two speed sources. Half of all moving reports (49 %, 1,080 devices) carry no driver id.
 - Offline-buffered reports are 2.1 % of the stream and arrive a median 1.9 minutes late under the reconnection model; a fifteen-minute watermark brings trip segmentation within four devices of the oracle, while applying reports unbuffered in arrival order is worse than dropping them (65 devices wrong, 84 trips cut by phantom gaps).
 
+## Findings from P6 (modeling layer, CRM exports of January 2024 and September 2026)
+
+- A type-2 snapshot across the two CRM exports recovers what the CRM overwrites and purges. Of the 4,959 customer subscription slots active in January 2024, 44.5 % had been renewed on a replacement device by September 2026, 19.0 % renewed on the same device, 18.5 % were left to expire with the row kept, and 16.6 % (821 slots at 486 organisations) were purged from the list; 183 of the 2,968 organisations active in January 2024 have no dated contract row left.
+- The numbers F0, P1 and P3 published come out of the marts exactly: the 12 fleet metrics of the foundation README from one table, 182 flagged customer devices in 14 chronic / 128 intermittent / 40 transient, 26 of 143 observed units severe on day 4, field-visit tiers of 27 / 18 / 19 / 118, and 13,753 cleaned contract rows. 42 tests pin them, so a change to the marts that would move a published result fails CI.
+- Grain is not what the source systems say. The vehicle master is one row per registration, not per vehicle: 33 VINs appear twice and 134 devices sit on more than one registration. The CRM holds 34 rows whose expiration precedes the term start, 25 returns before activation and 2,117 rows with no dates at all; the marts resolve the grain and flag the defects rather than correcting them silently.
+- The snapshot is a replay of dated exports and only holds in order. Replaying the 2024 export onto a snapshot that already contains 2026 is recorded as a fresh change, not skipped: 19,010 rows become 33,061 with versions that overlap. The build therefore starts from an empty warehouse every time, and a test fails on any overlapping version.
+
 ## How to read the projects
 
 - **Real / public / synthetic** is stated for every dataset. Nothing synthetic is presented as fleet performance.
 - **Validation** is designed per question (time-based splits, independent time windows, round-trip checks, hand-computed fixtures), and every README has a "what this cannot tell you" section.
-- Code is Python (pandas, DuckDB, scikit-learn, lifelines, matplotlib) and SQL; tests run in GitHub Actions.
+- Code is Python (pandas, DuckDB, scikit-learn, lifelines, matplotlib) and SQL, with dbt for the shared marts; tests run in GitHub Actions.
 
 ## About
 
